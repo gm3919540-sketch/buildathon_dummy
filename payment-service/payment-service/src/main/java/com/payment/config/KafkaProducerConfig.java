@@ -9,6 +9,7 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,6 +34,12 @@ public class KafkaProducerConfig {
         properties.put(
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 JacksonJsonSerializer.class
+        );
+
+
+        properties.put(
+                JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS,
+                false
         );
 
         return new DefaultKafkaProducerFactory<>(properties);
