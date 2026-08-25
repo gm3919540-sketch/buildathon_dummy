@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
+import com.payment.exception.RedisConnectionException;
 
 @Slf4j
 @Service
@@ -54,7 +55,7 @@ public class PaymentService {
 
     private void simulatePaymentFailure() {
 
-        throw new RuntimeException(
+        throw new RedisConnectionException(
                 "Redis connection pool exhausted while processing payment"
         );
     }
