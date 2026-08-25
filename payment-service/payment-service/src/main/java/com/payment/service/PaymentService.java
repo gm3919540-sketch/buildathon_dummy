@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -19,24 +21,51 @@ public class PaymentService {
 
         String traceId = MDC.get("traceId");
 
-        String message =
-                "Redis connection pool exhausted while processing payment";
+        try {
+            simulatePaymentFailure();
 
-        log.error(message);
+            return "Payment processed successfully";
 
-        LogEventMessage event = new LogEventMessage(
-                LocalDateTime.now(),
-                "payment-service",
-                "ERROR",
-                traceId,
-                message,
-                "RedisConnectionException",
-                "Simulated stack trace",
-                "production"
+        } catch (Exception exception) {
+
+            log.error(
+                    "Payment processing failed",
+                    exception
+            );
+
+            String stackTrace = getStackTrace(exception);
+
+            LogEventMessage event = new LogEventMessage(
+                    LocalDateTime.now(),
+                    "payment-service",
+                    "ERROR",
+                    traceId,
+                    exception.getMessage(),
+                    exception.getClass().getSimpleName(),
+                    stackTrace,
+                    "production"
+            );
+
+            logEventProducer.publish(event);
+
+            throw exception;
+        }
+    }
+
+    private void simulatePaymentFailure() {
+
+        throw new RuntimeException(
+                "Redis connection pool exhausted while processing payment"
         );
+    }
 
-        logEventProducer.publish(event);
+    private String getStackTrace(Exception exception) {
 
-        throw new RuntimeException(message);
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+
+        exception.printStackTrace(printWriter);
+
+        return stringWriter.toString();
     }
 }
