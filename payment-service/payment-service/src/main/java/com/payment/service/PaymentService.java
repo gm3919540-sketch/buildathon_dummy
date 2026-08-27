@@ -1,15 +1,20 @@
 package com.payment.service;
 
 import com.payment.dto.LogEventMessage;
+import com.payment.exception.BankServiceException;
+import com.payment.exception.DatabaseConnectionException;
+import com.payment.exception.PaymentGatewayTimeoutException;
+import com.payment.exception.RedisConnectionException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
-import com.payment.exception.RedisConnectionException;
 
 @Slf4j
 @Service
@@ -18,6 +23,7 @@ public class PaymentService {
 
     private final LogEventProducer logEventProducer;
 
+
     public String processPayment(
             String failureType
     ) {
@@ -25,7 +31,10 @@ public class PaymentService {
         String traceId = MDC.get("traceId");
 
         try {
-            simulatePaymentFailure(failureType);
+
+            simulatePaymentFailure(
+                    failureType
+            );
 
             return "Payment processed successfully";
 
@@ -36,18 +45,20 @@ public class PaymentService {
                     exception
             );
 
-            String stackTrace = getStackTrace(exception);
+            String stackTrace =
+                    getStackTrace(exception);
 
-            LogEventMessage event = new LogEventMessage(
-                    LocalDateTime.now(),
-                    "payment-service",
-                    "ERROR",
-                    traceId,
-                    exception.getMessage(),
-                    exception.getClass().getSimpleName(),
-                    stackTrace,
-                    "production"
-            );
+            LogEventMessage event =
+                    new LogEventMessage(
+                            LocalDateTime.now(),
+                            "payment-service",
+                            "ERROR",
+                            traceId,
+                            exception.getMessage(),
+                            exception.getClass().getSimpleName(),
+                            stackTrace,
+                            "production"
+                    );
 
             logEventProducer.publish(event);
 
@@ -55,15 +66,22 @@ public class PaymentService {
         }
     }
 
+
     private void simulatePaymentFailure(
             String failureType
     ) {
 
+        if (failureType == null) {
 
-        switch(
+            throw new IllegalArgumentException(
+                    "Failure type cannot be null"
+            );
+        }
+
+
+        switch (
                 failureType.toUpperCase()
         ) {
-
 
             case "REDIS":
 
@@ -74,39 +92,50 @@ public class PaymentService {
 
             case "DATABASE":
 
-                throw new RuntimeException(
+                throw new DatabaseConnectionException(
                         "Database connection timeout while saving payment transaction"
                 );
 
 
             case "GATEWAY":
 
-                throw new RuntimeException(
+                throw new PaymentGatewayTimeoutException(
                         "Payment gateway timeout while processing payment"
                 );
 
 
             case "BANK":
 
-                throw new RuntimeException(
+                throw new BankServiceException(
                         "Bank API returned 503 Service Unavailable"
                 );
 
 
             default:
 
-                throw new RuntimeException(
-                        "Unknown payment failure type"
+                throw new IllegalArgumentException(
+                        "Unknown payment failure type: "
+                                + failureType
                 );
         }
     }
 
-    private String getStackTrace(Exception exception) {
 
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(stringWriter);
+    private String getStackTrace(
+            Exception exception
+    ) {
 
-        exception.printStackTrace(printWriter);
+        StringWriter stringWriter =
+                new StringWriter();
+
+        PrintWriter printWriter =
+                new PrintWriter(
+                        stringWriter
+                );
+
+        exception.printStackTrace(
+                printWriter
+        );
 
         return stringWriter.toString();
     }
