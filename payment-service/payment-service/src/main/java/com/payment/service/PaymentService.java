@@ -18,12 +18,14 @@ public class PaymentService {
 
     private final LogEventProducer logEventProducer;
 
-    public String processPayment() {
+    public String processPayment(
+            String failureType
+    ) {
 
         String traceId = MDC.get("traceId");
 
         try {
-            simulatePaymentFailure();
+            simulatePaymentFailure(failureType);
 
             return "Payment processed successfully";
 
@@ -53,11 +55,50 @@ public class PaymentService {
         }
     }
 
-    private void simulatePaymentFailure() {
+    private void simulatePaymentFailure(
+            String failureType
+    ) {
 
-        throw new RedisConnectionException(
-                "Redis connection pool exhausted while processing payment"
-        );
+
+        switch(
+                failureType.toUpperCase()
+        ) {
+
+
+            case "REDIS":
+
+                throw new RedisConnectionException(
+                        "Redis connection pool exhausted while processing payment"
+                );
+
+
+            case "DATABASE":
+
+                throw new RuntimeException(
+                        "Database connection timeout while saving payment transaction"
+                );
+
+
+            case "GATEWAY":
+
+                throw new RuntimeException(
+                        "Payment gateway timeout while processing payment"
+                );
+
+
+            case "BANK":
+
+                throw new RuntimeException(
+                        "Bank API returned 503 Service Unavailable"
+                );
+
+
+            default:
+
+                throw new RuntimeException(
+                        "Unknown payment failure type"
+                );
+        }
     }
 
     private String getStackTrace(Exception exception) {

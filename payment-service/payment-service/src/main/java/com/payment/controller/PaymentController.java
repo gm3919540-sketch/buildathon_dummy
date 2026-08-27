@@ -13,8 +13,17 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+
     @PostMapping
-    public String processPayment() {
-        return paymentService.processPayment();
+    public String processPayment(
+            @RequestParam(
+                    defaultValue = "REDIS"
+            )
+            String failureType
+    ) {
+
+        return paymentService.processPayment(
+                failureType
+        );
     }
 }
